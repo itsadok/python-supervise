@@ -291,10 +291,14 @@ class Service(object):
             reached (means downtime for STATUS_DOWN).
 
         """
-        byte = struct.Struct("20B")
         normallyup = 0
 
         s = open(self._status,"rb").read(20)
+        if len(s) == 20:
+            byte = struct.Struct("20B")
+        else:
+            byte = struct.Struct("18B")
+
         s = byte.unpack_from(s)
 
         try:
@@ -310,8 +314,8 @@ class Service(object):
         pid <<=8; pid += s[12]
 
         if pid:
-            if s[19] == 1: status = STATUS_UP
-            if s[19] == 2: status = STATUS_FINISH
+            if len(s) < 20 or s[19] == 1: status = STATUS_UP
+            elif s[19] == 2: status = STATUS_FINISH
         else:
             pid = None
             status = STATUS_DOWN
@@ -322,7 +326,7 @@ class Service(object):
         if pid and s[16]: action = PAUSED
         if not pid and s[17] == 'u': action = WANT_UP
         if pid and s[17] == 'd': action = WANT_DOWN
-        if pid and s[18]: action = GOT_TERM
+        if pid and len(s) == 20 and s[18]: action = GOT_TERM
 
         # When is now?
         try:
